@@ -55,6 +55,8 @@ actions!(
         ToggleElRunsFocus,
         /// Pushes the dbt project to an Ellode platform project, as the bundle its dbt runs take.
         PushDbtProject,
+        /// Pulls connections.yml from an Ellode platform project; secrets stay on the console, as names.
+        PullConnections,
     ]
 );
 
@@ -83,6 +85,9 @@ pub fn init(cx: &mut App) {
         });
         workspace.register_action(|workspace, _: &PushDbtProject, window, cx| {
             el::push_dbt_project(workspace, window, cx);
+        });
+        workspace.register_action(|workspace, _: &PullConnections, window, cx| {
+            el::pull_connections(workspace, window, cx);
         });
         workspace.register_action(|workspace, _: &xdi::TogglePanelFocus, window, cx| {
             workspace.toggle_panel_focus::<xdi::XdiPanel>(window, cx);

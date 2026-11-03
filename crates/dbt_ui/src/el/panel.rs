@@ -42,6 +42,9 @@ pub struct ElPanel {
     missing_env: std::collections::HashMap<SharedString, Vec<String>>,
     /// Remote name → the token variable that is not set locally.
     remotes_missing_token: std::collections::HashMap<SharedString, String>,
+    /// Remotes that are a platform project through its console: their
+    /// connections can be pulled.
+    console_remotes: std::collections::HashSet<SharedString>,
     /// The built-in local runner: the licence check's answer, the
     /// container's state, and whatever start or stop is in flight.
     runner: RunnerState,
@@ -282,6 +285,7 @@ impl ElPanel {
             remotes: Vec::new(),
             missing_env: Default::default(),
             remotes_missing_token: Default::default(),
+            console_remotes: Default::default(),
             runner: RunnerState {
                 access: None,
                 container: None,
@@ -333,6 +337,7 @@ impl ElPanel {
         // Real env + project .env: only ever probed for a NAME's presence.
         let env = el_engine::env::EnvMap::load(&root, None);
         self.remotes_missing_token.clear();
+        self.console_remotes.clear();
         self.runner.remote_name = local_runner::runner_remote(&root)
             .map(|remote| remote.name.into())
             .unwrap_or_else(|_| local_runner::REMOTE_NAME.into());
@@ -358,6 +363,9 @@ impl ElPanel {
                                 .to_owned(),
                         };
                         let name: SharedString = name.clone().into();
+                        if super::platform::platform_remote(&remote.url).is_some() {
+                            self.console_remotes.insert(name.clone());
+                        }
                         let mut refs = Vec::new();
                         if let Some(token) = &remote.token {
                             el_engine::env::collect_var_refs(token, &mut refs);
@@ -1089,6 +1097,25 @@ impl ElPanel {
 
     pub fn remotes_changed(&mut self, cx: &mut Context<Self>) {
         self.refresh(cx);
+    }
+
+    fn pull_connections(&mut self, name: SharedString, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(root) = self.root.clone() else {
+            return;
+        };
+        let panel = cx.entity().downgrade();
+        self.workspace
+            .update(cx, |workspace, cx| {
+                super::pull_connections_modal::ElPullConnectionsModal::deploy(
+                    workspace,
+                    Some(panel),
+                    root,
+                    Some(name),
+                    window,
+                    cx,
+                );
+            })
+            .ok();
     }
 
     fn edit_remote(
@@ -2293,6 +2320,19 @@ impl ElPanel {
                             .color(Color::Muted)
                             .truncate(),
                     )
+                    .when(self.console_remotes.contains(name), |row| {
+                        let name = name.clone();
+                        row.child(
+                            IconButton::new(("el-remote-pull-connections", ix), IconName::Download)
+                                .icon_size(IconSize::XSmall)
+                                .icon_color(Color::Muted)
+                                .tooltip(Tooltip::text("Pull connections from the console"))
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    cx.stop_propagation();
+                                    this.pull_connections(name.clone(), window, cx);
+                                })),
+                        )
+                    })
                     .child({
                         let name = name.clone();
                         IconButton::new(("el-remote-edit", ix), IconName::Pencil)

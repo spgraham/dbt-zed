@@ -14,6 +14,7 @@ pub mod mapping_editor;
 pub mod mcp;
 pub mod panel;
 pub mod platform;
+pub mod pull_connections_modal;
 pub mod push_dbt_modal;
 pub mod remote_modal;
 pub mod rename_stream_modal;
@@ -461,6 +462,17 @@ pub fn push_dbt_project(workspace: &mut Workspace, window: &mut Window, cx: &mut
         return;
     };
     push_dbt_modal::ElPushDbtModal::deploy(workspace, root, window, cx);
+}
+
+/// Pulls connections.yml from one of the project's Ellode platform remotes:
+/// the console's connections, secrets left as the names they are kept by.
+pub fn pull_connections(workspace: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
+    let Some(root) = discover_el_root(workspace, cx) else {
+        toast(workspace, "No project folder open in this workspace.", cx);
+        return;
+    };
+    let panel = workspace.panel::<ElPanel>(cx).map(|panel| panel.downgrade());
+    pull_connections_modal::ElPullConnectionsModal::deploy(workspace, panel, root, None, window, cx);
 }
 
 pub fn initialize_workspace(
