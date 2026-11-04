@@ -1198,6 +1198,7 @@ impl ElPipelineCanvas {
             return;
         }
         pipeline.streams.push(el_engine::spec::StreamSpec {
+            on_cast_failure: None,
             name: dragged.table.clone(),
             source: el_engine::spec::SourceObject::Table {
                 schema: Some(dragged.schema.clone()),
@@ -1320,6 +1321,7 @@ impl ElPipelineCanvas {
                 continue;
             }
             pipeline.streams.push(el_engine::spec::StreamSpec {
+                on_cast_failure: None,
                 name: table.clone(),
                 source: el_engine::spec::SourceObject::Table {
                     schema: Some(schema),

@@ -282,6 +282,7 @@ impl MappingEditorState {
                     return None; // pure pass-through needs no rule
                 }
                 Some(ColumnSpec {
+                    on_cast_failure: None,
                     name: draft.name.to_string(),
                     cast: cast.and_then(|cast| cast.parse().ok()),
                     strict: draft.strict.then_some(true),

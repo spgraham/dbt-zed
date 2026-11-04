@@ -593,6 +593,7 @@ pub(crate) fn fold_stream_events(
                 rows_read,
                 rows_written,
                 cast_failures,
+                ..
             } => {
                 let entry = agg.entry(stream.clone()).or_default();
                 entry.phase = Some(format!("{phase:?}").to_lowercase());
@@ -5560,6 +5561,8 @@ mod tests {
             cast_failures: None,
             error: None,
             streams: Vec::new(),
+            rows_rejected: None,
+            triggered_by: None,
         }
     }
 
@@ -5643,6 +5646,7 @@ mod tests {
             rows_read: read,
             rows_written: written,
             cast_failures: 0,
+            rows_rejected: 0,
         }
     }
 
@@ -5702,6 +5706,7 @@ mod tests {
                 cast_failures: 0,
                 column_failures: Vec::new(),
                 columns: Vec::new(),
+                rows_rejected: 0,
             },
             stream("lines"),
             chunk("lines", el_engine::Phase::Stage, 700_000, 700_000),

@@ -641,6 +641,7 @@ impl BuilderForm {
                                 continue; // already a stream — skip quietly
                             }
                             pipeline.streams.push(StreamSpec {
+                                on_cast_failure: None,
                                 name: name.clone(),
                                 source: SourceObject::Table {
                                     schema: Some(schema.clone()),
@@ -704,6 +705,7 @@ impl BuilderForm {
                     },
                 };
                 pipeline.streams.push(StreamSpec {
+                    on_cast_failure: None,
                     name,
                     source,
                     mode: None,
