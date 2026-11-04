@@ -6,7 +6,7 @@ version = "1.17.2"
 publish.workspace = true
 license = "GPL-3.0-or-later"
 authors = ["Zed Team <hi@zed.dev>"]
-default-run = "zed"
+default-run = "ellode-ide"
 
 [lints]
 workspace = true
@@ -54,7 +54,7 @@ visual-tests = [
 ]
 
 [[bin]]
-name = "zed"
+name = "ellode-ide"
 path = "src/main.rs"
 
 [[bin]]
@@ -284,8 +284,8 @@ repl = { workspace = true, features = ["test-support"] }
 
 [package.metadata.bundle]
 icon = ["resources/app-icon-zdbt@2x.png", "resources/app-icon-zdbt.png"]
-identifier = "dev.zdbt.zdbt"
-name = "zdbt"
+identifier = "dev.ellode.ellode-ide"
+name = "ellode-ide"
 osx_minimum_system_version = "10.15.7"
 osx_info_plist_exts = ["resources/info/*"]
 osx_url_schemes = ["zed"]

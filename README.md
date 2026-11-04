@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/zdbt-logo.svg" alt="zdbt — the dbt IDE, forged from Zed" width="440">
+  <img src="assets/zdbt-logo.svg" alt="ellode-ide — the dbt IDE, forged from Zed" width="440">
 </p>
 
-**zdbt** is a personal **dbt IDE** built as a fork of [Zed](https://zed.dev)
+**ellode-ide** (formerly zdbt) is a personal **dbt IDE** built as a fork of [Zed](https://zed.dev)
 ([zed-industries/zed](https://github.com/zed-industries/zed), forked at tag
 `v1.17.2`). It adds first-class, native dbt support directly into the editor —
 no webviews, all GPUI.
@@ -96,9 +96,9 @@ auto-update so builds don't replace themselves with official Zed.
 
 The binary doubles as two MCP servers speaking MCP over stdio:
 
-- `zdbt --dbt-mcp` exposes `dbt_list_models`, `dbt_model_info`,
+- `ellode-ide --dbt-mcp` exposes `dbt_list_models`, `dbt_model_info`,
   `dbt_lineage`, `dbt_column_lineage`, `dbt_show`, and `dbt_compile`.
-- `zdbt --el-mcp` exposes the extract-load side: `el_list_pipelines`,
+- `ellode-ide --el-mcp` exposes the extract-load side: `el_list_pipelines`,
   `el_pipeline_info`, `el_validate`, `el_list_connections`, `el_list_tables`,
   `el_table_columns`, `el_query` (read-only), `el_preview_stream`,
   `el_list_remotes`, and `el_remote_status`. Database calls go through the
@@ -107,7 +107,7 @@ The binary doubles as two MCP servers speaking MCP over stdio:
   use — never a URL, password, or token — and no tool runs or deploys a
   pipeline.
 
-**Inside zdbt no setup is needed**: a workspace containing a dbt project
+**Inside ellode-ide no setup is needed**: a workspace containing a dbt project
 auto-registers the `dbt` context server for the agent panel, and one
 containing an EL project (`el/connections.yml` or `el/pipelines/`) registers
 `el` (your own `context_servers.dbt` / `context_servers.el` entry overrides
@@ -117,17 +117,17 @@ either). For external MCP clients, point them at the binary yourself:
 "context_servers": {
   "dbt": {
     "source": "custom",
-    "command": "/Applications/zdbt.app/Contents/MacOS/zdbt",
+    "command": "/Applications/ellode-ide.app/Contents/MacOS/ellode-ide",
     "args": ["--dbt-mcp"]
   },
   "el": {
     "source": "custom",
-    "command": "/Applications/zdbt.app/Contents/MacOS/zdbt",
+    "command": "/Applications/ellode-ide.app/Contents/MacOS/ellode-ide",
     "args": ["--el-mcp"]
   }
 }
 ```
 
 Any MCP client works — e.g. Claude Code:
-`claude mcp add dbt -- /Applications/zdbt.app/Contents/MacOS/zdbt --dbt-mcp` and
-`claude mcp add el -- /Applications/zdbt.app/Contents/MacOS/zdbt --el-mcp`.
+`claude mcp add dbt -- /Applications/ellode-ide.app/Contents/MacOS/ellode-ide --dbt-mcp` and
+`claude mcp add el -- /Applications/ellode-ide.app/Contents/MacOS/ellode-ide --el-mcp`.

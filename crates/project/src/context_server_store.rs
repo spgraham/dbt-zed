@@ -1152,7 +1152,7 @@ impl ContextServerStore {
                     });
             }
         }
-        // Fork: dbt projects get zdbt's built-in MCP server automatically —
+        // Fork: dbt projects get ellode-ide's built-in MCP server automatically —
         // this binary re-invoked with --dbt-mcp — unless the user configured
         // their own "dbt" entry.
         if !merged.contains_key("dbt") {

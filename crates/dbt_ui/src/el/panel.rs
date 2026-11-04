@@ -2988,7 +2988,7 @@ impl ElPanel {
                         "Servers",
                         None,
                         "el/remotes.yml lists the servers the IDE deploys to and watches. Add \
-                         server points at a running daemon, installs one over SSH (zdbt el \
+                         server points at a running daemon, installs one over SSH (ellode-ide el \
                          install-remote), or reaches a project of the Ellode platform through \
                          its console with your access token. Tokens are ${VAR} references \
                          resolved from .env.",

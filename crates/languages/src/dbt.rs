@@ -75,7 +75,7 @@ impl LspInstaller for DbtLspAdapter {
                 env: None,
             });
         }
-        // dbt Fusion installed by zdbt's dbt.auto_install setting (see
+        // dbt Fusion installed by ellode-ide's dbt.auto_install setting (see
         // dbt_ui::dbt_install) — the managed binary also serves the LSP.
         let managed = paths::data_dir()
             .join("dbt-fusion")

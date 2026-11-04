@@ -1,6 +1,6 @@
-//! MCP server exposing zdbt's extract-load tools to agents.
+//! MCP server exposing ellode-ide's extract-load tools to agents.
 //!
-//! Runs as `zdbt --el-mcp` over the same stdio loop as the dbt server. The
+//! Runs as `ellode-ide --el-mcp` over the same stdio loop as the dbt server. The
 //! tools read the YAML under `el/` that the canvas edits, and reach
 //! databases only through the connector worker or a connection's declared
 //! remote — the same paths the EL panel uses — so an agent sees what the

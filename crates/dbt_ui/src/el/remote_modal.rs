@@ -649,7 +649,7 @@ impl ElRemoteModal {
         self.write(remotes, done, pasted, window, cx);
     }
 
-    /// Runs `zdbt el install-remote` in a terminal tab: the daemon gets
+    /// Runs `ellode-ide el install-remote` in a terminal tab: the daemon gets
     /// installed on the server over the user's ssh, and the server is
     /// declared locally when it finishes.
     fn install_over_ssh(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -676,7 +676,7 @@ impl ElRemoteModal {
             }
         };
         let Ok(exe) = std::env::current_exe() else {
-            return self.fail("could not locate the zdbt binary".into(), cx);
+            return self.fail("could not locate the ellode-ide binary".into(), cx);
         };
         let mut args = vec![
             "el".to_owned(),

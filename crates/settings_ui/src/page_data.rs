@@ -8911,7 +8911,7 @@ fn dbt_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Distribution",
-                description: "Which dbt distribution zdbt targets: \"fusion\" (default) or \"core\". Core switches catalog refresh to `dbt docs generate` and auto-install to a Python virtualenv.",
+                description: "Which dbt distribution ellode-ide targets: \"fusion\" (default) or \"core\". Core switches catalog refresh to `dbt docs generate` and auto-install to a Python virtualenv.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("dbt.distribution"),

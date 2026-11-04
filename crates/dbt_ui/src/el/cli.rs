@@ -1,10 +1,10 @@
-//! The headless EL CLI: `zdbt el run <pipeline>` — cron-able on any
+//! The headless EL CLI: `ellode-ide el run <pipeline>` — cron-able on any
 //! machine, no GPUI involved. Progress streams as JSON lines on stdout;
 //! the exit code is the run status.
 
 use std::path::{Path, PathBuf};
 
-/// Entry point for `zdbt el …`, called from main() before GPUI init.
+/// Entry point for `ellode-ide el …`, called from main() before GPUI init.
 /// Returns the process exit code.
 pub fn main(args: &[String]) -> i32 {
     match args.first().map(String::as_str) {
@@ -14,11 +14,11 @@ pub fn main(args: &[String]) -> i32 {
         Some("install-remote") => install_remote(&args[1..]),
         _ => {
             eprintln!(
-                "usage: zdbt el run <pipeline.yml | name> [--project <root>] [--chunk-rows <n>]\n       \
-                 zdbt el ls [--project <root>]\n       \
-                 zdbt el serve [--listen <addr:port>] [--project <root>] \
+                "usage: ellode-ide el run <pipeline.yml | name> [--project <root>] [--chunk-rows <n>]\n       \
+                 ellode-ide el ls [--project <root>]\n       \
+                 ellode-ide el serve [--listen <addr:port>] [--project <root>] \
                  [--tls-cert <pem> --tls-key <pem>] [--insecure-http] [--track-checkout]\n       \
-                 zdbt el install-remote <user@host> --remote-project <dir> [--name <n>] \
+                 ellode-ide el install-remote <user@host> --remote-project <dir> [--name <n>] \
                  [--url <https://host:7431>] [--listen <addr:port>] [--branch <b>] [--project <root>]"
             );
             2
@@ -26,7 +26,7 @@ pub fn main(args: &[String]) -> i32 {
     }
 }
 
-/// `zdbt el serve`: the scheduling daemon with the JSON API. Token from
+/// `ellode-ide el serve`: the scheduling daemon with the JSON API. Token from
 /// ELLODE_TOKEN; non-loopback binds require the token AND TLS.
 fn serve(args: &[String]) -> i32 {
     let Some(root) = project_root(args) else {
@@ -118,7 +118,7 @@ fn run(args: &[String]) -> i32 {
         return 1;
     };
     let Some(spec_arg) = args.first().filter(|arg| !arg.starts_with("--")) else {
-        eprintln!("usage: zdbt el run <pipeline.yml | name>");
+        eprintln!("usage: ellode-ide el run <pipeline.yml | name>");
         return 2;
     };
     let Some(spec_path) = resolve_pipeline(&root, spec_arg) else {
@@ -184,13 +184,13 @@ fn run(args: &[String]) -> i32 {
     }
 }
 
-/// `zdbt el install-remote user@host`: installs the daemon on a server
+/// `ellode-ide el install-remote user@host`: installs the daemon on a server
 /// over the user's own ssh, with the token generated HERE and shipped on
 /// stdin (never argv), then declares the server locally — remotes.yml
 /// entry + token in .env — so the Remote tab connects right away.
 fn install_remote(args: &[String]) -> i32 {
     let Some(host_spec) = args.first().filter(|arg| !arg.starts_with("--")).cloned() else {
-        eprintln!("usage: zdbt el install-remote <user@host> --remote-project <dir> …");
+        eprintln!("usage: ellode-ide el install-remote <user@host> --remote-project <dir> …");
         return 2;
     };
     let Some(root) = project_root(args) else {
@@ -368,7 +368,7 @@ fn install_remote(args: &[String]) -> i32 {
 /// verbatim when given (how the token travels — never on a command line).
 #[allow(
     clippy::disallowed_methods,
-    reason = "headless `zdbt el` CLI: no executor runs here and waiting on ssh is the point"
+    reason = "headless `ellode-ide el` CLI: no executor runs here and waiting on ssh is the point"
 )]
 fn run_ssh(host: &str, ssh_flags: &[String], command: &str, stdin: Option<&str>) -> bool {
     use std::io::Write as _;

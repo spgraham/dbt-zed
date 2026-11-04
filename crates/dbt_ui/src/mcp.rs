@@ -1,6 +1,6 @@
-//! Native MCP (Model Context Protocol) server exposing zdbt's dbt tools.
+//! Native MCP (Model Context Protocol) server exposing ellode-ide's dbt tools.
 //!
-//! Runs as `zdbt --dbt-mcp` speaking newline-delimited JSON-RPC over stdio —
+//! Runs as `ellode-ide --dbt-mcp` speaking newline-delimited JSON-RPC over stdio —
 //! the transport Zed's agent panel (and Claude Code, and any MCP client)
 //! expects from a `context_servers` command. Tools reuse the same lineage
 //! store, environment discovery, and dbt invocation the results panel uses,
@@ -64,12 +64,12 @@ fn arg_str<'a>(arguments: &'a Value, key: &str) -> Option<&'a str> {
 
 pub fn serve() {
     let store = LineageStore::default();
-    serve_stdio("zdbt", tool_descriptors(), |name, arguments| {
+    serve_stdio("ellode-ide", tool_descriptors(), |name, arguments| {
         call_tool(&store, name, arguments)
     });
 }
 
-/// The MCP loop both zdbt servers share: one JSON-RPC message per line on
+/// The MCP loop both ellode-ide servers share: one JSON-RPC message per line on
 /// stdin, one response per line on stdout, until stdin closes.
 pub fn serve_stdio(
     server_name: &str,

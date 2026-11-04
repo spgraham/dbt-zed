@@ -907,9 +907,12 @@ mod linux {
                 let dir = cli.parent().context("no parent path for cli")?;
 
                 // libexec is the standard, lib/zed is for Arch (and other non-libexec distros),
-                // ./zed is for the target directory in development builds.
-                let possible_locations =
-                    ["../libexec/zed-editor", "../lib/zed/zed-editor", "./zed"];
+                // ./ellode-ide is for the target directory in development builds.
+                let possible_locations = [
+                    "../libexec/zed-editor",
+                    "../lib/zed/zed-editor",
+                    "./ellode-ide",
+                ];
                 possible_locations
                     .iter()
                     .find_map(|p| dir.join(p).canonicalize().ok().filter(|path| path != &cli))
@@ -1274,9 +1277,13 @@ mod windows {
                 let cli = std::env::current_exe()?;
                 let dir = cli.parent().context("no parent path for cli")?;
 
-                // ../Zed.exe is the standard, lib/zed is for MSYS2, ./zed.exe is for the target
+                // ../Zed.exe is the standard, lib/zed is for MSYS2, ./ellode-ide.exe is for the target
                 // directory in development builds.
-                let possible_locations = ["../Zed.exe", "../lib/zed/zed-editor.exe", "./zed.exe"];
+                let possible_locations = [
+                    "../Zed.exe",
+                    "../lib/zed/zed-editor.exe",
+                    "./ellode-ide.exe",
+                ];
                 possible_locations
                     .iter()
                     .find_map(|p| dir.join(p).canonicalize().ok().filter(|path| path != &cli))
@@ -1452,7 +1459,7 @@ mod mac_os {
             user_data_dir: Option<&str>,
         ) -> io::Result<ExitStatus> {
             let path = match self {
-                Bundle::App { app_bundle, .. } => app_bundle.join("Contents/MacOS/zed"),
+                Bundle::App { app_bundle, .. } => app_bundle.join("Contents/MacOS/ellode-ide"),
                 Bundle::LocalPath { executable, .. } => executable.clone(),
             };
 
@@ -1466,7 +1473,7 @@ mod mac_os {
 
         fn path(&self) -> PathBuf {
             match self {
-                Bundle::App { app_bundle, .. } => app_bundle.join("Contents/MacOS/zed"),
+                Bundle::App { app_bundle, .. } => app_bundle.join("Contents/MacOS/ellode-ide"),
                 Bundle::LocalPath { executable, .. } => executable.clone(),
             }
         }

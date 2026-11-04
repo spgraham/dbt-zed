@@ -198,9 +198,9 @@ fn fail_to_open_window(e: anyhow::Error, _cx: &mut App) {
 static STARTUP_TIME: OnceLock<Instant> = OnceLock::new();
 
 fn main() {
-    // Fork: `--dbt-mcp` serves zdbt's dbt tools over MCP stdio for agents
+    // Fork: `--dbt-mcp` serves ellode-ide's dbt tools over MCP stdio for agents
     // (Zed agent panel context_servers, Claude Code, any MCP client).
-    // Headless EL CLI: `zdbt el run <pipeline>` — no GPUI, cron-able.
+    // Headless EL CLI: `ellode-ide el run <pipeline>` — no GPUI, cron-able.
     {
         let args: Vec<String> = std::env::args().skip(1).collect();
         if args.first().map(String::as_str) == Some("el") {
@@ -382,7 +382,7 @@ fn main() {
 
     let (open_listener, mut open_rx) = OpenListener::new();
 
-    // zdbt ships on the dev channel, so the shipped release build must take
+    // ellode-ide ships on the dev channel, so the shipped release build must take
     // part in the single-instance handshake (on Windows it owns the
     // "zdbt-Instance-Mutex" the installer checks and the named pipe the CLI,
     // the Explorer verb and the file associations hand their paths to). Only

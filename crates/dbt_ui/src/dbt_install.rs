@@ -1,6 +1,6 @@
 //! Managed dbt Fusion distribution.
 //!
-//! When no dbt binary is configured or on PATH, zdbt downloads the official
+//! When no dbt binary is configured or on PATH, ellode-ide downloads the official
 //! dbt Fusion CLI from dbt Labs' CDN into the Zed data directory and runs
 //! commands with it. Controlled by the `dbt.auto_install` and
 //! `dbt.fusion_version` settings; the same managed binary is picked up by the
@@ -112,7 +112,7 @@ pub async fn ensure_binary(
         anyhow::ensure!(
             settings.auto_install,
             "dbt is not on PATH. Install dbt Core, set the `dbt.binary` setting, \
-             or enable `dbt.auto_install` to let zdbt create a managed install"
+             or enable `dbt.auto_install` to let ellode-ide create a managed install"
         );
         install_core(settings).await?;
         return Ok(managed_core_binary_path().to_string_lossy().into_owned());
@@ -124,7 +124,7 @@ pub async fn ensure_binary(
     anyhow::ensure!(
         settings.auto_install,
         "dbt is not on PATH. Install dbt Fusion (https://docs.getdbt.com), set the \
-         `dbt.binary` setting, or enable `dbt.auto_install` to let zdbt download it"
+         `dbt.binary` setting, or enable `dbt.auto_install` to let ellode-ide download it"
     );
     let http = http.context("no HTTP client available to download dbt Fusion")?;
     install(http.as_ref(), &settings.fusion_version).await?;
@@ -136,7 +136,7 @@ async fn install_core(settings: &DbtSettings) -> Result<()> {
     anyhow::ensure!(
         !settings.core_adapter.is_empty(),
         "set the `dbt.core_adapter` setting (e.g. \"snowflake\", \"duckdb\") so \
-         zdbt knows which dbt Core adapter to install"
+         ellode-ide knows which dbt Core adapter to install"
     );
     let python = if cfg!(windows) { "python" } else { "python3" };
     let dir = managed_core_dir();

@@ -1266,7 +1266,7 @@ pub struct DbtSettingsContent {
     ///
     /// Default: "latest"
     pub fusion_version: Option<String>,
-    /// Which dbt distribution zdbt targets: "fusion" or "core". Core switches
+    /// Which dbt distribution ellode-ide targets: "fusion" or "core". Core switches
     /// catalog refresh to `dbt docs generate` and auto-install to a Python
     /// virtualenv with dbt-core plus the configured adapter.
     ///
