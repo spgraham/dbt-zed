@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/zdbt-logo.svg" alt="ellode-ide — the dbt IDE, forged from Zed" width="440">
+  <img src="assets/ellode-logo.svg" alt="ellode-ide, the dbt IDE forged from Zed" width="440">
 </p>
 
 **ellode-ide** (formerly zdbt) is a personal **dbt IDE** built as a fork of [Zed](https://zed.dev)

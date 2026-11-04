@@ -283,7 +283,7 @@ repl = { workspace = true, features = ["test-support"] }
 
 
 [package.metadata.bundle]
-icon = ["resources/app-icon-zdbt@2x.png", "resources/app-icon-zdbt.png"]
+icon = ["resources/app-icon-ellode-ide@2x.png", "resources/app-icon-ellode-ide.png"]
 identifier = "dev.ellode.ellode-ide"
 name = "ellode-ide"
 osx_minimum_system_version = "10.15.7"
