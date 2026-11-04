@@ -6346,7 +6346,7 @@ dependencies = [
 [[package]]
 name = "el_engine"
 version = "0.1.0"
-source = "git+ssh://git@github.com/arezki1990/ellode.git?branch=main#b3bf5991dbe114711808c046f5297bf03ecb761d"
+source = "git+ssh://git@github.com/arezki1990/ellode.git?branch=main#a6eb23f92fd527bf04166e680d6df0b61bf7281d"
 dependencies = [
  "age",
  "anyhow",
@@ -6382,7 +6382,7 @@ dependencies = [
 [[package]]
 name = "el_import"
 version = "0.1.0"
-source = "git+ssh://git@github.com/arezki1990/ellode.git?branch=main#b3bf5991dbe114711808c046f5297bf03ecb761d"
+source = "git+ssh://git@github.com/arezki1990/ellode.git?branch=main#a6eb23f92fd527bf04166e680d6df0b61bf7281d"
 dependencies = [
  "indexmap 2.14.0",
  "percent-encoding",
@@ -9721,7 +9721,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "tokio",
  "tower-service",
  "tracing",
@@ -9805,7 +9805,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.56.0",
+ "windows-core 0.57.0",
 ]
 
 [[package]]
@@ -16780,7 +16780,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.1",
  "rustls 0.23.44",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -16817,7 +16817,7 @@ dependencies = [
  "cfg_aliases 0.2.1",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -21978,7 +21978,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fb391ac70462b3097a755618fbf9c8f95ecc1eb379a414f7b46f202ed10db1f"
 dependencies = [
  "cc",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -24213,7 +24213,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
