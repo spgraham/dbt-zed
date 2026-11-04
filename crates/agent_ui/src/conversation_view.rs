@@ -3194,6 +3194,32 @@ impl ConversationView {
         }
     }
 
+    /// Appends `text` to the active thread's message editor. False when
+    /// there is no thread to write into.
+    pub(crate) fn append_text(
+        &self,
+        text: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(active_thread) = self.active_thread() else {
+            return false;
+        };
+        active_thread.update(cx, |thread, cx| {
+            let editor = thread.active_editor(cx);
+            editor.update(cx, |editor, cx| {
+                editor.append_message(
+                    vec![acp::ContentBlock::Text(acp::TextContent::new(text))],
+                    Some("\n\n"),
+                    window,
+                    cx,
+                );
+            });
+            window.focus(&editor.focus_handle(cx), cx);
+        });
+        true
+    }
+
     fn current_model_name(&self, cx: &App) -> SharedString {
         // For native agent (Zed Agent), use the specific model name (e.g., "Claude 3.5 Sonnet")
         // For ACP agents, use the agent name (e.g., "Claude Agent", "Gemini CLI")

@@ -636,6 +636,15 @@ pub mod agent {
         pub auto_submit: bool,
     }
 
+    /// Adds `text` to the message editor of the agent thread on screen, or
+    /// opens a new thread with it when there is none. Never sends it.
+    #[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
+    #[action(namespace = agent)]
+    #[serde(deny_unknown_fields)]
+    pub struct AppendToThread {
+        pub text: String,
+    }
+
     /// A single merge conflict region extracted from a file.
     #[derive(Clone, Debug, PartialEq, Deserialize, JsonSchema)]
     pub struct ConflictContent {

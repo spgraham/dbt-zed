@@ -143,6 +143,9 @@ pub struct DbtResultsPanel {
     state: ResultsState,
     view: ResultsView,
     compiled_editor: Option<Entity<Editor>>,
+    /// What dbt said when the last run failed, in a read-only editor so it
+    /// scrolls and can be selected and copied.
+    failure_editor: Option<Entity<Editor>>,
     lineage_layout: Option<Arc<LayoutGraph>>,
     lineage_tree: Option<Arc<LineageTree>>,
     expanded: HashSet<SharedString>,
@@ -419,13 +422,12 @@ pub fn show_model_data(
     workspace.focus_panel::<DbtResultsPanel>(window, cx);
     panel.update(cx, |panel, cx| match resolved {
         Some((target, root)) => panel.run_show(target, root, window, cx),
-        None => {
-            panel.state = ResultsState::Failed {
-                model: "?".into(),
-                message: "Open a dbt model file first, then run dbt: show model data.".into(),
-            };
-            cx.notify();
-        }
+        None => panel.show_failure(
+            "?".into(),
+            "Open a dbt model file first, then run dbt: show model data.".into(),
+            window,
+            cx,
+        ),
     });
 }
 
@@ -490,6 +492,7 @@ impl DbtResultsPanel {
                 state: ResultsState::Empty,
                 view: ResultsView::Table,
                 compiled_editor: None,
+                failure_editor: None,
                 lineage_layout: None,
                 lineage_tree: None,
                 expanded: Default::default(),
@@ -964,6 +967,7 @@ impl DbtResultsPanel {
         self.state = ResultsState::Running {
             model: model.clone(),
         };
+        self.failure_editor = None;
         cx.notify();
 
         self.last_root = Some(root.clone());
@@ -1104,16 +1108,56 @@ impl DbtResultsPanel {
                     }
                     Err(error) => {
                         this.compiled_editor = None;
-                        this.state = ResultsState::Failed {
-                            model,
-                            message: format!("{error:#}").into(),
-                        };
+                        this.show_failure(model, format!("{error:#}"), window, cx);
                     }
                 }
                 cx.notify();
             })
             .ok();
         });
+    }
+
+    /// Puts the panel in its failed state with `message` in a read-only
+    /// editor, colour codes taken out.
+    fn show_failure(
+        &mut self,
+        model: SharedString,
+        message: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let message = strip_ansi(&message);
+        let buffer = cx.new(|cx| language::Buffer::local(message.clone(), cx));
+        self.failure_editor = Some(cx.new(|cx| {
+            let mut editor = Editor::for_buffer(buffer, None, window, cx);
+            editor.set_read_only(true);
+            editor.set_soft_wrap();
+            editor.set_show_line_numbers(false, cx);
+            editor
+        }));
+        self.state = ResultsState::Failed {
+            model,
+            message: message.into(),
+        };
+        cx.notify();
+    }
+
+    /// The failed run, worded for the agent: what ran, where, and what dbt
+    /// said.
+    fn failure_prompt(&self) -> Option<String> {
+        let ResultsState::Failed { model, message } = &self.state else {
+            return None;
+        };
+        let project = self
+            .last_root
+            .as_ref()
+            .map(|root| format!(" in the dbt project at `{}`", root.display()))
+            .unwrap_or_default();
+        Some(format!(
+            "`dbt show {model}` failed{project}. This is dbt's output:\n\n\
+             ```text\n{}\n```\n\nWhy did it fail, and how do I fix it?",
+            message.trim_end()
+        ))
     }
 
     fn render_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1146,6 +1190,39 @@ impl DbtResultsPanel {
                     }),
             )
             .child(Label::new(title).size(LabelSize::Small))
+            .when(
+                self.view == ResultsView::Table
+                    && matches!(self.state, ResultsState::Failed { .. }),
+                |this| {
+                    this.child(
+                        Button::new("dbt-failure-copy", "Copy")
+                            .start_icon(Icon::new(IconName::Copy).size(IconSize::Small))
+                            .tooltip(ui::Tooltip::text("Copy dbt's output"))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                if let ResultsState::Failed { message, .. } = &this.state {
+                                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                                        message.to_string(),
+                                    ));
+                                }
+                            })),
+                    )
+                    .child(
+                        Button::new("dbt-failure-ask-agent", "Ask agent")
+                            .start_icon(Icon::new(IconName::ZedAgent).size(IconSize::Small))
+                            .tooltip(ui::Tooltip::text(
+                                "Add this error to the agent thread, ready to send",
+                            ))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                if let Some(text) = this.failure_prompt() {
+                                    window.dispatch_action(
+                                        Box::new(zed_actions::agent::AppendToThread { text }),
+                                        cx,
+                                    );
+                                }
+                            })),
+                    )
+                },
+            )
             .when(
                 self.view == ResultsView::Table
                     && matches!(self.state, ResultsState::Loaded { .. }),
@@ -3956,12 +4033,16 @@ impl DbtResultsPanel {
                     Label::new(format!("Running dbt show --select {model}…")).color(Color::Muted),
                 )
                 .into_any_element(),
-            ResultsState::Failed { message, .. } => v_flex()
-                .size_full()
-                .p_2()
-                .overflow_hidden()
-                .child(Label::new(message.clone()).color(Color::Error))
-                .into_any_element(),
+            ResultsState::Failed { message, .. } => match &self.failure_editor {
+                Some(editor) => div().size_full().child(editor.clone()).into_any_element(),
+                None => div()
+                    .id("dbt-failure")
+                    .size_full()
+                    .p_2()
+                    .overflow_y_scroll()
+                    .child(Label::new(message.clone()).color(Color::Error))
+                    .into_any_element(),
+            },
             ResultsState::Loaded { columns, rows, .. } => {
                 if columns.is_empty() {
                     return v_flex()
@@ -4235,6 +4316,47 @@ pub(crate) fn parse_show_output(
         anyhow::bail!("no result rows found in dbt show output:\n{stdout_str}\n{stderr_str}");
     }
     anyhow::bail!("dbt show failed:\n{stdout_str}\n{stderr_str}");
+}
+
+/// Takes terminal colour and link codes out of dbt's output.
+fn strip_ansi(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '\u{1b}' {
+            out.push(ch);
+            continue;
+        }
+        match chars.peek() {
+            // CSI: parameters up to a final byte in @..~.
+            Some('[') => {
+                chars.next();
+                while let Some(next) = chars.next() {
+                    if ('@'..='~').contains(&next) {
+                        break;
+                    }
+                }
+            }
+            // OSC: up to BEL or the string terminator ESC + backslash.
+            Some(']') => {
+                chars.next();
+                while let Some(next) = chars.next() {
+                    if next == '\u{7}' {
+                        break;
+                    }
+                    if next == '\u{1b}' {
+                        chars.next();
+                        break;
+                    }
+                }
+            }
+            Some(_) => {
+                chars.next();
+            }
+            None => {}
+        }
+    }
+    out
 }
 
 impl EventEmitter<PanelEvent> for DbtResultsPanel {}
@@ -4584,5 +4706,17 @@ mod render_tests {
             panel.update(cx, |panel, _| panel.view = view);
             draw("another tab", cx);
         }
+    }
+}
+
+#[cfg(test)]
+mod failure_tests {
+    use super::strip_ansi;
+
+    #[test]
+    fn strips_colour_and_link_codes() {
+        let text = "\u{1b}[31merror\u{1b}[0m: \u{1b}]8;;file:///a\u{1b}\\a.sql\u{1b}]8;;\u{1b}\\ done";
+        assert_eq!(strip_ansi(text), "error: a.sql done");
+        assert_eq!(strip_ansi("plain"), "plain");
     }
 }

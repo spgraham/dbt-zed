@@ -24,9 +24,9 @@ use serde::{Deserialize, Serialize};
 use zed_actions::{
     DecreaseBufferFontSize, IncreaseBufferFontSize, ResetBufferFontSize,
     agent::{
-        AddSelectionToThread, ConflictContent, LogoutAgent, NewThreadWithPrompt, OpenSettings,
-        ReauthenticateAgent, ResetAgentZoom, ResetOnboarding, ResolveConflictedFilesWithAgent,
-        ResolveConflictsWithAgent, ReviewBranchDiff, SelectAgent,
+        AddSelectionToThread, AppendToThread, ConflictContent, LogoutAgent, NewThreadWithPrompt,
+        OpenSettings, ReauthenticateAgent, ResetAgentZoom, ResetOnboarding,
+        ResolveConflictedFilesWithAgent, ResolveConflictsWithAgent, ReviewBranchDiff, SelectAgent,
     },
     assistant::{
         FocusAgent, ManageSkills, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules, Toggle,
@@ -607,6 +607,41 @@ pub fn init(cx: &mut App) {
                             window,
                             cx,
                         );
+                    });
+                })
+                .register_action(|workspace, action: &AppendToThread, window, cx| {
+                    let Some(panel) = workspace.panel::<AgentPanel>(cx) else {
+                        return;
+                    };
+                    workspace.focus_panel::<AgentPanel>(window, cx);
+                    let text = action.text.clone();
+                    panel.update(cx, |_, cx| {
+                        cx.defer_in(window, move |panel, window, cx| {
+                            let appended = panel.active_conversation_view().is_some_and(|view| {
+                                view.update(cx, |view, cx| {
+                                    view.append_text(text.clone(), window, cx)
+                                })
+                            });
+                            if appended {
+                                return;
+                            }
+                            panel.external_thread(
+                                None,
+                                None,
+                                None,
+                                None,
+                                Some(AgentInitialContent::ContentBlock {
+                                    blocks: vec![acp::ContentBlock::Text(acp::TextContent::new(
+                                        text,
+                                    ))],
+                                    auto_submit: false,
+                                }),
+                                true,
+                                AgentThreadSource::AgentPanel,
+                                window,
+                                cx,
+                            );
+                        });
                     });
                 })
                 .register_action(
