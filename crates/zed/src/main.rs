@@ -4,14 +4,19 @@
 mod reliability;
 mod zed;
 
-// Ensure the binary name stays in sync with APP_NAME so that the paths used
-// at runtime (data dir, config dir, etc.) match what the binary is called.
+// Fork: the binary is ellode-ide, but paths::APP_NAME stays "Zed" on purpose,
+// so settings, keymaps, extensions and the database stay where existing
+// installs keep them (~/Library/Application Support/Zed, ~/.config/zed).
+// Upstream asserts the two match; following it would move every user's data.
 const _: () = assert!(
     paths::APP_NAME_LOWERCASE
         .as_bytes()
-        .eq_ignore_ascii_case(env!("CARGO_BIN_NAME").as_bytes()),
-    "paths::APP_NAME_LOWERCASE must match the binary name. \
-     Forks: update APP_NAME in crates/paths/src/paths.rs when renaming the binary.",
+        .eq_ignore_ascii_case(b"zed")
+        && env!("CARGO_BIN_NAME")
+            .as_bytes()
+            .eq_ignore_ascii_case(b"ellode-ide"),
+    "the binary is ellode-ide and paths::APP_NAME stays Zed: changing either \
+     moves where users' settings and data live.",
 );
 
 use agent_ui::AgentPanel;
