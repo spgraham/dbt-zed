@@ -92,6 +92,36 @@ cargo build ${build_flag} --package zed --package cli --target $target_triple ${
 # from influencing dynamic libraries required by it.
 cargo build ${build_flag} --package remote_server --target $target_triple ${ZED_MAC_EXTRA_FEATURES:+--features "$ZED_MAC_EXTRA_FEATURES"}
 
+# The connector worker ships beside the app's executable, where the EL panel
+# looks for it first, so a fresh install runs local connections with nothing
+# else to set up. It is built from the engine checkout the IDE is built
+# against: ELLODE_ENGINE_DIR, else the Ellode repository this IDE sits in.
+engine_dir="${ELLODE_ENGINE_DIR:-$(cd .. && pwd)}"
+if [[ ! -f "$engine_dir/crates/el_worker/Cargo.toml" ]]; then
+    echo "No Ellode engine checkout at $engine_dir: set ELLODE_ENGINE_DIR to one"
+    exit 1
+fi
+echo "Compiling ellode-worker from $engine_dir"
+(cd "$engine_dir" && cargo build --release --package el_worker --bin ellode-worker --target $target_triple)
+worker_path="$engine_dir/target/$target_triple/release/ellode-worker"
+
+# The Snowflake connector loads the ADBC driver from beside the worker. It is
+# not built here (Arrow publishes it in its Python wheels), so it comes from
+# ELLODE_ADBC_SNOWFLAKE_DRIVER or from the install folder the IDE used before.
+snowflake_driver="${ELLODE_ADBC_SNOWFLAKE_DRIVER:-}"
+if [[ -z "$snowflake_driver" ]]; then
+    for candidate in "$HOME/Library/Application Support/Zed/el-worker/"libadbc_driver_snowflake.{dylib,so}; do
+        if [[ -f "$candidate" ]]; then
+            snowflake_driver="$candidate"
+            break
+        fi
+    done
+fi
+if [[ -z "$snowflake_driver" || ! -f "$snowflake_driver" ]]; then
+    echo "WARNING: no ADBC Snowflake driver found; the bundled worker will not reach Snowflake"
+    snowflake_driver=""
+fi
+
 # With extra features (e.g. gpui_platform/runtime_shaders on machines without
 # the Metal offline toolchain), cargo-bundle's own featureless rebuild would
 # fail; bundle from the binaries built above instead.
@@ -210,6 +240,12 @@ function sign_app_binaries() {
         # sequence of codesign commands modeled after this example: https://developer.apple.com/forums/thread/701514
         /usr/bin/codesign --deep --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/cli" -v
         /usr/bin/codesign --deep --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/git" -v
+        /usr/bin/codesign --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/ellode-worker" -v
+        for driver in "${app_path}/Contents/MacOS/"libadbc_driver_snowflake.*; do
+            if [[ -f "$driver" ]]; then
+                /usr/bin/codesign --force --timestamp --options runtime --sign "$IDENTITY" "$driver" -v
+            fi
+        done
         /usr/bin/codesign --deep --force --timestamp --options runtime --entitlements crates/zed/resources/zed.entitlements --sign "$IDENTITY" "${app_path}/Contents/MacOS/ellode-ide" -v
         /usr/bin/codesign --force --timestamp --options runtime --entitlements crates/zed/resources/zed.entitlements --sign "$IDENTITY" "${app_path}" -v
     else
@@ -341,6 +377,10 @@ upload_debug_symbols
 
 cp target/${target_triple}/${target_dir}/ellode-ide "${app_path}/Contents/MacOS/ellode-ide"
 cp target/${target_triple}/${target_dir}/cli "${app_path}/Contents/MacOS/cli"
+cp -X "$worker_path" "${app_path}/Contents/MacOS/ellode-worker"
+if [[ -n "$snowflake_driver" ]]; then
+    cp -X "$snowflake_driver" "${app_path}/Contents/MacOS/$(basename "$snowflake_driver")"
+fi
 sign_app_binaries
 
 sign_binary "target/$target_triple/release/remote_server"
