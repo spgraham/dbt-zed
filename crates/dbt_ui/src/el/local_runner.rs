@@ -207,6 +207,7 @@ pub async fn start(project_root: &Path, image: &str) -> Result<()> {
     };
     let token = existing.clone().unwrap_or_else(new_token);
     let oracle = oracle_client_args(project_root)?;
+    let keys = snowflake_key_args(project_root)?;
 
     let name = container_name(project_root);
     // A previous container for this project (stopped, or on an old image)
@@ -240,8 +241,10 @@ pub async fn start(project_root: &Path, image: &str) -> Result<()> {
         "ELLODE_TOKEN",
     ])
     .args(&oracle)
+    .args(&keys.args)
     .arg(image)
-    .env("ELLODE_TOKEN", &token);
+    .env("ELLODE_TOKEN", &token)
+    .envs(keys.env.iter().map(|(name, value)| (name, value)));
     let output = run.output().await.context("running docker")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -425,6 +428,98 @@ fn new_token() -> String {
 /// Instant Client beside the worker. When `EL_RUNNER_ORACLE_CLIENT_DIR` names
 /// one, it is mounted with a sqlnet.ora allowing the old logon protocol 10g
 /// still speaks (kept in the IDE's data directory, never in the project).
+/// What the runner's Snowflake connections need from this machine to sign in.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct KeyArgs {
+    args: Vec<String>,
+    /// Passed to `docker run` by name only, so no key appears in `ps`.
+    env: Vec<(String, String)>,
+}
+
+/// The container sees the project and nothing else of this machine, yet
+/// `.env` usually points at a key kept outside it. A `private_key_path`
+/// outside the project is mounted read-only at its own path, so the path
+/// means the same inside. A `private_key` variable that holds a key file's
+/// path, not the key, is handed to the container as the file's contents:
+/// that field takes the key itself, and the daemon would refuse a path.
+fn snowflake_key_args(project_root: &Path) -> Result<KeyArgs> {
+    // A project whose connections don't load has nothing to sign in with;
+    // the panel reports why where the connections are listed.
+    let Ok((connections, _)) = el_engine::spec::load_active_connections(project_root) else {
+        return Ok(KeyArgs::default());
+    };
+    let env = el_engine::env::EnvMap::load(project_root, None);
+    let mut keys = KeyArgs::default();
+    for connection in connections.connections.values() {
+        let el_engine::spec::Connection::Snowflake(snowflake) = connection else {
+            continue;
+        };
+        if snowflake.workspace.as_deref() != Some(REMOTE_NAME) {
+            continue;
+        }
+        match snowflake.auth.key_source() {
+            Some(Ok(el_engine::spec::KeySource::File(template))) => {
+                let Ok(value) = el_engine::env::resolve_templates(template, &env) else {
+                    continue;
+                };
+                let path = local_path(value.expose(), project_root);
+                if path.is_absolute() && !path.starts_with(project_root) && path.is_file() {
+                    let mount = format!("type=bind,source={0},target={0},readonly", path.display());
+                    if !keys.args.contains(&mount) {
+                        keys.args.extend(["--mount".to_owned(), mount]);
+                    }
+                }
+            }
+            Some(Ok(el_engine::spec::KeySource::Text(template))) => {
+                let Some(variable) = sole_variable(template) else {
+                    continue;
+                };
+                if keys.env.iter().any(|(name, _)| name == variable) {
+                    continue;
+                }
+                let Some(value) = env.get(variable) else {
+                    continue;
+                };
+                let path = local_path(&value, project_root);
+                if value.contains("-----BEGIN") || !path.is_file() {
+                    continue;
+                }
+                let key = std::fs::read_to_string(&path).with_context(|| {
+                    format!("reading the private key file that {variable} names")
+                })?;
+                keys.args.extend(["--env".to_owned(), variable.to_owned()]);
+                keys.env.push((variable.to_owned(), key));
+            }
+            Some(Err(_)) | None => {}
+        }
+    }
+    Ok(keys)
+}
+
+/// The variable a template is made of and nothing else: `${NAME}`.
+fn sole_variable(template: &str) -> Option<&str> {
+    let name = template.trim().strip_prefix("${")?.strip_suffix('}')?;
+    (!name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+        .then_some(name)
+}
+
+/// A path as `.env` gives it: `~` is the home directory, and a relative path
+/// is the project's, as the engine anchors it.
+fn local_path(value: &str, project_root: &Path) -> PathBuf {
+    let value = value.trim().trim_matches('"');
+    if let Some(rest) = value.strip_prefix("~/") {
+        if let Some(home) = std::env::var_os("HOME") {
+            return PathBuf::from(home).join(rest);
+        }
+    }
+    let path = PathBuf::from(value);
+    if path.is_absolute() {
+        path
+    } else {
+        project_root.join(path)
+    }
+}
+
 fn oracle_client_args(project_root: &Path) -> Result<Vec<String>> {
     let Some(dir) = el_engine::env::EnvMap::load(project_root, None)
         .get(ORACLE_CLIENT_VAR)
@@ -592,6 +687,67 @@ fn first_line(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The runner's own Snowflake connections get their key files; a key
+    /// given inline, or a connection another remote runs, adds nothing.
+    #[test]
+    fn runner_connections_bring_their_key_files() {
+        let project = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let root = project.path();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("el")).unwrap();
+        let fake_key = "-----BEGIN PRIVATE KEY-----\nTUlJRmFrZQ==\n-----END PRIVATE KEY-----\n";
+        let key_file = outside.path().join("loader.p8");
+        std::fs::write(&key_file, fake_key).unwrap();
+        let mounted_file = outside.path().join("mounted.p8");
+        std::fs::write(&mounted_file, fake_key).unwrap();
+        std::fs::write(
+            root.join(".env"),
+            format!(
+                "KEY_AS_PATH={}\nKEY_FILE={}\nKEY_INLINE=\"{}\"\n",
+                key_file.display(),
+                mounted_file.display(),
+                fake_key.replace('\n', "\\n"),
+            ),
+        )
+        .unwrap();
+        let connection = |name: &str, workspace: &str, auth: &str| {
+            format!(
+                "  {name}:\n    type: snowflake\n    workspace: {workspace}\n    account: acme\n    \
+                 user: LOADER\n    auth:\n      method: key_pair\n      {auth}\n"
+            )
+        };
+        std::fs::write(
+            root.join("el/connections.yml"),
+            format!(
+                "version: 1\nconnections:\n{}{}{}{}",
+                connection("AS_PATH", REMOTE_NAME, "private_key: ${KEY_AS_PATH}"),
+                connection("FILE", REMOTE_NAME, "private_key_path: ${KEY_FILE}"),
+                connection("INLINE", REMOTE_NAME, "private_key: ${KEY_INLINE}"),
+                connection("ELSEWHERE", "jules", "private_key: ${KEY_AS_PATH}"),
+            ),
+        )
+        .unwrap();
+
+        let keys = snowflake_key_args(root).unwrap();
+        let mount = format!(
+            "type=bind,source={0},target={0},readonly",
+            mounted_file.display()
+        );
+        assert_eq!(
+            keys,
+            KeyArgs {
+                args: vec![
+                    "--env".to_owned(),
+                    "KEY_AS_PATH".to_owned(),
+                    "--mount".to_owned(),
+                    mount,
+                ],
+                env: vec![("KEY_AS_PATH".to_owned(), fake_key.to_owned())],
+            }
+        );
+    }
 
     /// Real answers from `docker manifest inspect` against Artifact Registry
     /// and a stopped Docker Desktop.
